@@ -3,9 +3,11 @@
 #include <string.h>
 #include "json_c.c"
 
+
+
 /* 함수의 개수를 센 후 반환하는 함수 */
-int function_count(json_value json) {
-    json_value ext = json_get(json, "ext");
+int function_count(json_value *json) {
+    json_value ext = json_get(*json, "ext");
     int count = 0;
 
     for (int i = 0; i < json_len(ext); i++)
@@ -57,7 +59,7 @@ int main() {
     char *file_contents = read_file_to_buffer(fp); // 파일의 내용을 string으로 변환
     json_value json = json_create(file_contents); // string을 json_value로 변환
     free(file_contents);
-    int count = function_count(json);
+    int count = function_count(&json);
     printf("count = %d\n", count);
 
     // for(int i=0; i<json_len(json2); i++) {
