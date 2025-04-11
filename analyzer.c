@@ -17,7 +17,25 @@ void get_return_type(json_value *ast) {
             // 노드 타입이 함수 정의일 때만 실행
             json_value decl_node = json_get(node, "decl"); // FunDef 노드에서 decl 노드 저장
             char* func_name = json_get_string(decl_node, "name"); // decl 노드에서 함수 이름 문자열로 추출
-            printf("[%d]%s\n", i, func_name); // 함수 이름 출력
+            char* ret_type;
+            printf("[%d] %s ", i, func_name); // 함수 이름 출력
+
+            json_value type_1 = json_get(decl_node, "type");
+            json_value type_2 = json_get(type_1, "type");
+            json_value type_3 = json_get(type_2, "type");
+
+            char* type_2_nodetype = json_get_string(type_2, "_nodetype");
+            if(strcmp(type_2_nodetype, "PtrDecl") == 0) {
+                // 반환형이 포인터인 경우
+                json_value type_4 = json_get(type_3, "type");
+                ret_type = json_get_string(type_4, "names", 0);
+                printf("| *%s\n", ret_type);
+            } else {
+                // 반환형이 포인터가 아닌 경우
+                ret_type = json_get_string(type_3, "names", 0);
+                printf("| %s\n", ret_type);
+            }           
+            
         }
     }
 }
