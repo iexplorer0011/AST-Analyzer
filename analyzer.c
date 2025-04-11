@@ -3,121 +3,40 @@
 #include <string.h>
 #include "json_c.c"
 
-/* 함수명과 반환형을 출력하는 함수 */
-void getFunctionSignature(json_value *json) {
-    json_value ext = json_get(*json, "ext");
-    int ext_len = json_len(ext);
-    
-    printf("- 함수 목록 -\n");
-    
-    for (int i = 0; i < ext_len; i++) {
-        json_value node = json_get(ext, i);
-        char* node_type = json_get_string(node, "_nodetype");
-        
-        // 함수 정의(FuncDef) 처리
-        if (strcmp(node_type, "FuncDef") == 0) {
-            json_value decl = json_get(node, "decl");
-            char* func_name = json_get_string(decl, "name");
-            
-            // 타입 정보 가져오기
-            json_value type = json_get(decl, "type");
-            json_value func_type = json_get(type, "type");
-            
-            // 반환 타입 가져오기
-            json_value return_type_node = json_get(func_type, "type");
-            char* return_type_nodetype = json_get_string(return_type_node, "_nodetype");
-            
-            char* return_type = NULL;
-            
-            if (strcmp(return_type_nodetype, "IdentifierType") == 0) {
-                // 기본 타입인 경우
-                json_value names = json_get(return_type_node, "names");
-                return_type = json_get_string(names, 0);
-            } else if (strcmp(return_type_nodetype, "TypeDecl") == 0) {
-                // TypeDecl인 경우 한 단계 더 들어가기
-                json_value identifier_type = json_get(return_type_node, "type");
-                json_value names = json_get(identifier_type, "names");
-                return_type = json_get_string(names, 0);
-            } else if (strcmp(return_type_nodetype, "PtrDecl") == 0) {
-                // 포인터 타입인 경우
-                json_value ptr_type = json_get(return_type_node, "type");
-                json_value ptr_type_decl = json_get(ptr_type, "type");
-                json_value names = json_get(ptr_type_decl, "names");
-                
-                // 포인터 표시 추가
-                char* base_type = json_get_string(names, 0);
-                char* ptr_return_type = malloc(strlen(base_type) + 3);
-                sprintf(ptr_return_type, "%s*", base_type);
-                return_type = ptr_return_type;
-            }
-            
-            printf("함수 이름: %-15s | 반환형: %s\n", func_name, return_type ? return_type : "unknown");
-            
-            // 포인터 타입인 경우 메모리 해제
-            if (return_type_nodetype && strcmp(return_type_nodetype, "PtrDecl") == 0) {
-                free(return_type);
-            }
-        }
-        // 함수 선언(Decl) 처리
-        else if (strcmp(node_type, "Decl") == 0) {
-            // 타입 정보 가져오기
-            json_value type = json_get(node, "type");
-            char* type_nodetype = json_get_string(type, "_nodetype");
-            
-            // FuncDecl인 경우만 처리
-            if (strcmp(type_nodetype, "FuncDecl") == 0) {
-                char* func_name = json_get_string(node, "name");
-                
-                // 반환 타입 가져오기
-                json_value func_type = json_get(type, "type");
-                char* func_type_nodetype = json_get_string(func_type, "_nodetype");
-                
-                char* return_type = NULL;
-                
-                if (strcmp(func_type_nodetype, "TypeDecl") == 0) {
-                    json_value identifier_type = json_get(func_type, "type");
-                    json_value names = json_get(identifier_type, "names");
-                    return_type = json_get_string(names, 0);
-                } else if (strcmp(func_type_nodetype, "PtrDecl") == 0) {
-                    json_value ptr_type = json_get(func_type, "type");
-                    json_value identifier_type = json_get(ptr_type, "type");
-                    json_value names = json_get(identifier_type, "names");
-                    
-                    // 포인터 표시 추가
-                    char* base_type = json_get_string(names, 0);
-                    char* ptr_return_type = malloc(strlen(base_type) + 3);
-                    sprintf(ptr_return_type, "%s*", base_type);
-                    return_type = ptr_return_type;
-                }
-                
-                printf("함수 이름: %-15s | 반환형: %s\n", func_name, return_type ? return_type : "unknown");
-                
-                // 포인터 타입인 경우 메모리 해제
-                if (func_type_nodetype && strcmp(func_type_nodetype, "PtrDecl") == 0) {
-                    free(return_type);
-                }
-            }
+/* 함수의 반환형(Return Type)을 출력해주는 함수 */
+void get_return_type(json_value *ast) {
+    json_value ext = json_get(*ast, "ext"); // ext 배열열
+    int ext_len = json_len(ext); // ext 배열의 크기
+
+    // 배열의 크기만큼 Loop를 돎
+    for(int i = 0; i < ext_len; i++) {
+        json_value node = json_get(ext, i); // 배열의 i번째 노드 저장
+        char* _nodetype = json_get_string(node, "_nodetype"); // 노드 타입 문자열로 저장
+
+        if(strcmp(_nodetype, "FuncDef") == 0) {
+            // 노드 타입이 함수 정의일 때만 실행
+            json_value decl_node = json_get(node, "decl"); // FunDef 노드에서 decl 노드 저장
+            char* func_name = json_get_string(decl_node, "name"); // decl 노드에서 함수 이름 문자열로 추출
+            printf("[%d]%s\n", i, func_name); // 함수 이름 출력
         }
     }
-    
-    printf("----------------------------------------\n");
 }
 
-/* 함수의 개수를 센 후 반환하는 함수 */
-int function_count(json_value *json) {
-    json_value ext = json_get(*json, "ext");
-    int count = 0;
+/* 함수의 개수를 출력해주는 함수 */
+int count_function(json_value *ast) {
+    json_value ext = json_get(*ast, "ext"); // ext 배열
+    int ext_len = json_len(ext); // ext 배열의 크기
+    int func_count = 0; // 함수 개수 카운트 변수
 
-    for (int i = 0; i < json_len(ext); i++)
-    {
-        json_value object = json_get(ext, i);
-        json_value _nodetype = json_get(object, "_nodetype");
-        char *_nodetypeString = json_to_string(_nodetype);
-        
-        if(strcmp(_nodetypeString, "FuncDef") == 0) count++;
+    // 배열의 크기만큼 Loop를 돎
+    for(int i = 0; i < ext_len; i++) {
+        json_value node = json_get(ext, i); // 배열의 i번째 노드 저장
+        char* _nodetype = json_get_string(node, "_nodetype"); // 노드 타입 문자열로 저장
+        // 노드 타입이 "FuncDef"일 경우 카운트 증가
+        if(strcmp(_nodetype, "FuncDef") == 0) func_count++; 
     }
 
-    return count;    
+    return func_count; // 함수 개수 반환
 }
 
 /* 동적 할당 & 메모리에 파일 내용을 쓰는 함수 */
@@ -157,16 +76,12 @@ int main() {
     char *file_contents = read_file_to_buffer(fp); // 파일의 내용을 string으로 변환
     json_value json = json_create(file_contents); // string을 json_value로 변환
     free(file_contents);
-    int count = function_count(&json);
-    printf("count = %d\n", count);
-    getFunctionSignature(&json);
 
-    // for(int i=0; i<json_len(json2); i++) {
-    //     json_value json3 = json_get(json2, i);
-    //     json_value json4 = json_get(json3, "_nodetype");
-    //     json_print(json4); putchar('\n');
-    // }
-        
+    // 함수 개수 출력
+    int func_count = count_function(&json);
+    printf("func_count = %d\n", func_count);
+
+    get_return_type(&json);
 
     json_free(json);
 
