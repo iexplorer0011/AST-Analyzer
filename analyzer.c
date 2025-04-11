@@ -3,9 +3,9 @@
 #include <string.h>
 #include "json_c.c"
 
-/* 함수의 반환형(Return Type)을 출력해주는 함수 */
-void get_return_type(json_value *ast) {
-    json_value ext = json_get(*ast, "ext"); // ext 배열열
+/* 함수 정보를 출력하는 함수 */
+void get_function_info(json_value *ast) {
+    json_value ext = json_get(*ast, "ext"); // ext 배열
     int ext_len = json_len(ext); // ext 배열의 크기
 
     // 배열의 크기만큼 Loop를 돎
@@ -18,7 +18,7 @@ void get_return_type(json_value *ast) {
             json_value decl_node = json_get(node, "decl"); // FunDef 노드에서 decl 노드 저장
             char* func_name = json_get_string(decl_node, "name"); // decl 노드에서 함수 이름 문자열로 추출
             char* ret_type;
-            printf("[%d] %s ", i, func_name); // 함수 이름 출력
+            printf("\n[%d] %s ", i, func_name); // 함수 이름 출력
 
             json_value type_1 = json_get(decl_node, "type");
             json_value type_2 = json_get(type_1, "type");
@@ -34,27 +34,40 @@ void get_return_type(json_value *ast) {
                 // 반환형이 포인터가 아닌 경우
                 ret_type = json_get_string(type_3, "names", 0);
                 printf("| %s\n", ret_type);
-            }           
+            }
             
+            // 파라미터 추출
+            json_value args_node = json_get(type_1, "args");
+            if(json_is_null(args_node)) {
+                printf(": no have params.\n\n", i);
+                continue; // 파라미터가 없을 경우 다음 loop 실행
+            } else {
+                json_value params = json_get(args_node, "params");
+                int params_len = json_len(params);
+                printf("paramLen = %d\n", params_len);
+                for(int j = 0; j < params_len; j++) {
+                    json_value param_node = json_get(params, j);
+                    char* parameter_name = json_get_string(param_node, "name");
+                    json_value params_type_1 = json_get(param_node, "type");
+                    char* parameter_nodetype = json_get_string(params_type_1, "_nodetype");
+                    char* parameter_type;
+
+                    if(strcmp(parameter_nodetype, "PtrDecl") == 0) {
+                        // 파라미터가 포인터인 경우
+                        json_value params_type_2 = json_get(params_type_1, "type");
+                        json_value params_type_3 = json_get(params_type_2, "type");
+                        parameter_type = json_get_string(params_type_3, "names", 0);
+                        printf("%s | %s*\n", parameter_name, parameter_type);
+                    } else {
+                        // 파라미터가 포인터가 아닌 경우
+                        json_value params_type2 = json_get(params_type_1, "type");
+                        parameter_type = json_get_string(params_type2, "names", 0);
+                        printf("%s | %s\n", parameter_name, parameter_type);
+                    }                    
+                }
+            }
         }
     }
-}
-
-/* 함수의 개수를 출력해주는 함수 */
-int count_function(json_value *ast) {
-    json_value ext = json_get(*ast, "ext"); // ext 배열
-    int ext_len = json_len(ext); // ext 배열의 크기
-    int func_count = 0; // 함수 개수 카운트 변수
-
-    // 배열의 크기만큼 Loop를 돎
-    for(int i = 0; i < ext_len; i++) {
-        json_value node = json_get(ext, i); // 배열의 i번째 노드 저장
-        char* _nodetype = json_get_string(node, "_nodetype"); // 노드 타입 문자열로 저장
-        // 노드 타입이 "FuncDef"일 경우 카운트 증가
-        if(strcmp(_nodetype, "FuncDef") == 0) func_count++; 
-    }
-
-    return func_count; // 함수 개수 반환
 }
 
 /* 동적 할당 & 메모리에 파일 내용을 쓰는 함수 */
@@ -95,11 +108,8 @@ int main() {
     json_value json = json_create(file_contents); // string을 json_value로 변환
     free(file_contents);
 
-    // 함수 개수 출력
-    int func_count = count_function(&json);
-    printf("func_count = %d\n", func_count);
-
-    get_return_type(&json);
+    // get_return_type(&json);
+    get_function_info(&json);
 
     json_free(json);
 
